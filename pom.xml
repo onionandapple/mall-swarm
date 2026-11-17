@@ -34,6 +34,8 @@
         <skipTests>true</skipTests>
         <docker.host>http://192.168.3.101:2375</docker.host>
         <docker.maven.plugin.version>0.45.1</docker.maven.plugin.version>
+        <!-- 默认跳过 Docker 镜像构建，避免本机/服务器没有远程 Docker 时打包失败 -->
+        <docker.skip>true</docker.skip>
         <java.version>17</java.version>
         <spring-boot.version>3.5.14</spring-boot.version>
         <spring-cloud.version>2025.0.2</spring-cloud.version>
@@ -289,6 +291,8 @@
                         </execution>
                     </executions>
                     <configuration>
+                        <!-- 默认跳过镜像构建；需要构建时使用 -Ddocker.skip=false -->
+                        <skip>${docker.skip}</skip>
                         <!-- Docker 远程管理地址-->
                         <dockerHost>${docker.host}</dockerHost>
                         <images>

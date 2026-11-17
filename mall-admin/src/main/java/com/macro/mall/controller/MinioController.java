@@ -31,6 +31,13 @@ public class MinioController {
     private static final Logger LOGGER = LoggerFactory.getLogger(MinioController.class);
     @Value("${minio.endpoint}")
     private String ENDPOINT;
+    /**
+     * 浏览器访问图片使用的地址。
+     * 后端连接 MinIO 可以使用 127.0.0.1，但返回给前端的 URL 必须是外部可访问地址。
+     * 未配置时回退到 minio.endpoint。
+     */
+    @Value("${minio.public-endpoint:}")
+    private String PUBLIC_ENDPOINT;
     @Value("${minio.bucketName}")
     private String BUCKET_NAME;
     @Value("${minio.accessKey}")
@@ -75,7 +82,9 @@ public class MinioController {
             LOGGER.info("文件上传成功!");
             MinioUploadDto minioUploadDto = new MinioUploadDto();
             minioUploadDto.setName(filename);
-            minioUploadDto.setUrl(ENDPOINT + "/" + BUCKET_NAME + "/" + objectName);
+            String publicEndpoint = (PUBLIC_ENDPOINT == null || PUBLIC_ENDPOINT.isBlank())
+                    ? ENDPOINT : PUBLIC_ENDPOINT;
+            minioUploadDto.setUrl(publicEndpoint + "/" + BUCKET_NAME + "/" + objectName);
             return CommonResult.success(minioUploadDto);
         } catch (Exception e) {
             e.printStackTrace();

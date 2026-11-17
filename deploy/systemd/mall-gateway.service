@@ -1,0 +1,16 @@
+[Unit]
+Description=mall-gateway service
+After=network-online.target docker.service mall-admin.service mall-portal.service mall-auth.service
+Wants=network-online.target
+
+[Service]
+User=mall
+WorkingDirectory=/opt/mall-swarm
+ExecStart=/usr/bin/java -Xms384m -Xmx384m -XX:MaxMetaspaceSize=192m -Duser.timezone=Asia/Shanghai -jar /opt/mall-swarm/mall-gateway.jar --server.address=127.0.0.1 --spring.cloud.nacos.discovery.ip=127.0.0.1 --spring.cloud.nacos.config.refresh-enabled=false
+Restart=always
+RestartSec=10
+StandardOutput=append:/opt/mall-swarm/logs/mall-gateway.log
+StandardError=append:/opt/mall-swarm/logs/mall-gateway.log
+
+[Install]
+WantedBy=multi-user.target

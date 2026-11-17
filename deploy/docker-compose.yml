@@ -1,0 +1,145 @@
+# mall-swarm 单机部署中间件
+# 所有管理端口只绑定 127.0.0.1；MinIO 的 9000 端口绑定 Tailscale 地址供浏览器访问图片。
+# 使用方式：在 deploy 目录执行 docker compose --env-file ../.env up -d
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mall-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: mall
+      MYSQL_USER: mall
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=256M
+      - --max-connections=200
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+      - ./logs/mysql:/var/log/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: mall-redis
+    restart: always
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD}
+      - --maxmemory
+      - 128mb
+      - --maxmemory-policy
+      - allkeys-lru
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  nacos:
+    image: nacos/nacos-server:v2.5.1
+    container_name: mall-nacos
+    restart: always
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+      NACOS_AUTH_ENABLE: "false"
+      NACOS_AUTH_TOKEN: ${NACOS_AUTH_TOKEN}
+      NACOS_AUTH_IDENTITY_KEY: ${NACOS_AUTH_IDENTITY_KEY}
+      NACOS_AUTH_IDENTITY_VALUE: ${NACOS_AUTH_IDENTITY_VALUE}
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      JVM_XMN: 128m
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:8848:8848"
+      - "127.0.0.1:9848:9848"
+      - "127.0.0.1:9849:9849"
+    volumes:
+      - ./data/nacos:/home/nacos/data
+      - ./logs/nacos:/home/nacos/logs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8848/nacos/v1/console/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 30
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: mall-rabbitmq
+    hostname: mall-rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: mall
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: /mall
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+
+  mongo:
+    image: mongo:6
+    container_name: mall-mongo
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - ./data/mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    container_name: mall-minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+      TZ: Asia/Shanghai
+    ports:
+      # 图片直链：只绑定 Tailscale 地址，避免暴露到公网
+      - "100.125.54.127:9000:9000"
+      # 后端本机访问 MinIO
+      - "127.0.0.1:9000:9000"
+      # 管理控制台：只允许本机，通过 SSH 隧道访问
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - ./data/minio:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:9000/minio/health/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
