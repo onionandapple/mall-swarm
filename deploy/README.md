@@ -203,6 +203,7 @@ VITE_API_BASE_URL = /mall-portal
 | 仓库 | 提交 |
 |---|---|
 | `onionandapple/mall-swarm` | `4813b68` 部署适配：跳过 Docker 镜像构建、支持 MinIO 公网地址并补充单机部署文件 |
+| `onionandapple/mall-swarm` | `e0bd8bb` 补充部署文档（`deploy/README.md`） |
 | `onionandapple/mall-admin-web` | `57e7f4c` 部署适配：生产环境 API 走同源 `/mall-admin` 代理 |
 | `onionandapple/mall-app-web` | `4292238` 部署适配：生产环境 API 走同源 `/mall-portal` 代理 |
 
