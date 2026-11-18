@@ -463,6 +463,95 @@ minio:
 
 ## 七、日常运维
 
+### 0. 一键启停脚本
+
+服务器上已放置两个脚本：
+
+```text
+/opt/mall-swarm/start.sh
+/opt/mall-swarm/stop.sh
+```
+
+启动：
+
+```bash
+sudo /opt/mall-swarm/start.sh
+```
+
+它会：
+
+1. 启动 Docker；
+2. 启动 MySQL、Redis、Nacos、RabbitMQ、MongoDB、MinIO；
+3. 等待中间件健康；
+4. 检查/导入 `mall.sql`；
+5. 发布 Nacos 配置；
+6. 按 `admin -> portal -> auth -> gateway` 顺序启动 Java 服务；
+7. 启动 Nginx；
+8. 输出访问地址和服务状态。
+
+停止全部：
+
+```bash
+sudo /opt/mall-swarm/stop.sh
+```
+
+只停止 Java 服务，保留中间件和 Nginx：
+
+```bash
+sudo /opt/mall-swarm/stop.sh --apps-only
+```
+
+### 0.1 服务器文件分布
+
+```text
+/opt/mall-swarm/
+├─ mall-admin.jar            # mall-admin 运行包
+├─ mall-auth.jar             # mall-auth 运行包
+├─ mall-gateway.jar          # mall-gateway 运行包
+├─ mall-portal.jar           # mall-portal 运行包
+├─ start.sh                  # 一键启动
+├─ stop.sh                   # 一键停止
+├─ .env                      # MySQL/Redis/MQ/MinIO 密码，权限 600
+├─ 部署文档.md                # 本文档
+├─ sql/mall.sql              # 初始化 SQL
+├─ logs/                     # Java 服务日志
+├─ deploy/
+│  ├─ docker-compose.yml     # 中间件编排
+│  ├─ nacos/                 # Nacos 配置模板
+│  ├─ rendered/              # 渲染后的 Nacos 配置
+│  ├─ systemd/               # systemd 单元文件
+│  ├─ nginx/                 # Nginx 配置
+│  ├─ data/                  # MySQL/Mongo/MinIO/Nacos 数据
+│  └─ deploy.sh              # 首次完整部署脚本
+├─ src/                      # 服务器构建源码副本（非运行目录）
+└─ web/                      # 前端构建产物副本（非运行目录）
+```
+
+实际对外提供前端文件的目录是：
+
+```text
+/var/www/mall/admin/         # 管理端 dist
+/var/www/mall/app/           # 移动端 H5 dist
+```
+
+systemd 单元：
+
+```text
+/etc/systemd/system/mall-admin.service
+/etc/systemd/system/mall-auth.service
+/etc/systemd/system/mall-gateway.service
+/etc/systemd/system/mall-portal.service
+```
+
+Nginx 站点配置：
+
+```text
+/etc/nginx/sites-available/mall.conf
+/etc/nginx/sites-enabled/mall.conf
+```
+
+> 注意：`/opt/mall-swarm/src` 是构建时的源码副本，里面的 `deploy/docker-compose.yml` 可能不是最新；实际运行使用的是 `/opt/mall-swarm/deploy/docker-compose.yml`。
+
 ### 1. 服务管理
 
 ```bash
